@@ -75,7 +75,7 @@ class ZhihuSpider(Spider):
 
 
 if __name__ == '__main__':
-    zhihu = ZhihuSpider('18766121367', 'lyr910216')
+    zhihu = ZhihuSpider('', '')
     zhihu.login('')
     html = zhihu.fetch(
         u'https://www.zhihu.com/topic/19559937/hot')
