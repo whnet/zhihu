@@ -11,21 +11,6 @@ from sqlalchemy.schema import Index
 BaseModel = declarative_base()
 
 
-class Topic(BaseModel):
-    __tablename__ = 'zhihu_topic'
-    __table_args__ = (
-        Index('zhihu_topic_id', 'zhihu_id'),
-    )
-
-    id = Column(Integer, primary_key=True)
-    zhihu_id = Column(BigInteger, nullable=False)
-    topic = Column(String(64), nullable=False)
-    create_time = Column(
-        DateTime, default=datetime.now, nullable=False)
-    update_time = Column(
-        DateTime, default=datetime.now, nullable=False)
-
-
 class Question(BaseModel):
     __tablename__ = 'zhihu_question'
     __table_args__ = (
@@ -34,4 +19,9 @@ class Question(BaseModel):
 
     id = Column(Integer, primary_key=True)
     zhihu_id = Column(BigInteger, nullable=False)
-    question = Column(String(4096), nullable=False)
+    title = Column(String(512), nullable=False)
+    summary = Column(String(1024), nullable=False)
+    create_time = Column(
+        DateTime, default=datetime.now, nullable=False)
+    update_time = Column(
+        DateTime, default=datetime.now, nullable=False)
