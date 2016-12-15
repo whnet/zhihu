@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 
 import const
+import config
 import exceptions
 
 
@@ -75,7 +76,9 @@ class ZhihuSpider(Spider):
 
 
 if __name__ == '__main__':
-    zhihu = ZhihuSpider('18766121367', 'lyr910216')
+    zhihu = ZhihuSpider(
+        config.ZHIHU_USER_PHONE,
+        config.ZHIHU_USER_PASSWORD)
     zhihu.login('')
     html = zhihu.fetch(
         u'https://www.zhihu.com/topic/19559937/hot')
