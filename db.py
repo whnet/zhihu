@@ -8,6 +8,8 @@ from config import MYSQL, DEBUG
 from model import BaseModel
 
 __all__ = ['init_database']
+__author__ = 'gatsby'
+__version__ = '0.0.1'
 
 _db_conn_string = (
     'mysql+pymysql://{user}:{pass}@{host}:{port}/{db}?charset=utf8')
@@ -22,7 +24,8 @@ _engine = create_engine(
 def init_database():
     with closing(_engine.connect()) as conn:
         tables = [
-            t.name for t in BaseModel.metadata.sorted_tables
+            table.name for table in
+            BaseModel.metadata.sorted_tables
         ]
         tran = conn.begin()
         try:
