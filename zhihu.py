@@ -9,33 +9,21 @@ import config
 import exceptions
 
 
-class Spider(object):
+class ZhihuSpider(object):
 
     session = None
 
-    def __init__(self):
+    def __init__(self, user, password):
+        assert user and password
         self.session = requests.Session()
-
-    def login(self):
-        raise NotImplementedError()
+        self.user = user
+        self.password = password
+        super(ZhihuSpider, self).__init__()
 
     @property
     def date(self):
         return datetime.utcnow() \
             .strftime('%a, %d %b %Y %H:%M:%S GMT')
-
-    def save_files(self, name, ret=None):
-        pass
-
-
-class ZhihuSpider(Spider):
-
-    def __init__(self, user, password):
-        assert user and password
-        self.user = user
-        self.password = password
-        self.last_ret = None
-        super(ZhihuSpider, self).__init__()
 
     def login(self, catpcha):
         data = {
@@ -54,25 +42,16 @@ class ZhihuSpider(Spider):
         if ret.status_code != 200:
             raise exceptions.LoginError()
 
-    def fetch(self, url, data=None, method='GET'):
-        req = requests.Request(method, url)
+    def fetch(self, url, data=None,
+              headers=None, method='GET'):
+        req = requests.Request(
+            method, url, data=data,
+            headers=headers)
         prepared = self.session.prepare_request(req)
         prepared.headers['Date'] = self.date
         prepared.headers['User-Agent'] = const.UA_CHROME
         ret = self.session.send(prepared)
-        self.last_ret = ret
-        return ret.text
-
-    def save_files(self, name, ret=None):
-        if ret is not None:
-            ret = ret
-        elif self.last_ret is not None:
-            ret = self.last_ret
-            self.last_ret = None
-        else:
-            raise exceptions.NoDownTaskError()
-        with open(name, 'wb') as f:
-            f.write(ret.content)
+        return ret
 
 
 if __name__ == '__main__':
@@ -81,5 +60,4 @@ if __name__ == '__main__':
         config.ZHIHU_USER_PASSWORD)
     zhihu.login('')
     html = zhihu.fetch(
-        u'https://www.zhihu.com/topic/19559937/hot')
-    zhihu.save_files('topic.html')
+        u'https://www.zhihu.com/topic/19559937/top-answers?page=3')
