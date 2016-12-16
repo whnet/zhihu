@@ -3,11 +3,11 @@
 
 import requests
 from urlparse import urljoin
-from datetime import datetime
 
 import const
 import config
 import exceptions
+from spider import Spider
 from parser import HtmlPageParser, extract_question_id
 
 
@@ -34,21 +34,7 @@ class ZhihuPage(HtmlPageParser):
         return questions
 
 
-class ZhihuSpider(object):
-
-    session = None
-
-    def __init__(self, user, password):
-        assert user and password
-        self.session = requests.Session()
-        self.user = user
-        self.password = password
-        super(ZhihuSpider, self).__init__()
-
-    @property
-    def date(self):
-        return datetime.utcnow() \
-            .strftime('%a, %d %b %Y %H:%M:%S GMT')
+class ZhihuSpider(Spider):
 
     def login(self, catpcha):
         data = {
@@ -64,19 +50,8 @@ class ZhihuSpider(object):
         prepared.headers['Date'] = self.date
         prepared.headers['User-Agent'] = const.UA_CHROME
         ret = self.session.send(prepared)
-        if ret.status_code != 200:
+        if ret is None or ret.status_code != 200:
             raise exceptions.LoginError()
-
-    def fetch(self, url, data=None,
-              headers=None, method='GET'):
-        req = requests.Request(
-            method, url, data=data,
-            headers=headers)
-        prepared = self.session.prepare_request(req)
-        prepared.headers['Date'] = self.date
-        prepared.headers['User-Agent'] = const.UA_CHROME
-        ret = self.session.send(prepared)
-        return ret.text
 
 
 if __name__ == '__main__':
