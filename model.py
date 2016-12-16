@@ -19,12 +19,15 @@ class Question(BaseModel):
 
     id = Column(Integer, primary_key=True)
     zhihu_id = Column(BigInteger, nullable=False)
-    title = Column(String(512), nullable=False)
-    summary = Column(String(1024), nullable=False)
+    url = Column(String(255), default='', nullable=False)
+    title = Column(String(128), default='', nullable=False)
+    summary = Column(String(512), default='', nullable=False)
+    fllower_count = Column(Integer, default=0, nullable=False)
     create_time = Column(
         DateTime, default=datetime.now, nullable=False)
     update_time = Column(
         DateTime, default=datetime.now, nullable=False)
+    deleted = Column(Integer, default=0, nullable=False)
 
 
 class Proxy(BaseModel):

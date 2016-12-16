@@ -3,10 +3,13 @@
 
 import requests
 from urlparse import urljoin
+from contextlib import closing
 
 import const
 import config
 import exceptions
+from db import Session
+from model import Question
 from spider import Spider
 from parser import HtmlPageParser, extract_question_id
 
@@ -27,7 +30,7 @@ class ZhihuPage(HtmlPageParser):
             question_id = extract_question_id(url)
             question['question_id'] = int(question_id)
             question['url'] = url
-            question['title'] = ele_a.text
+            question['title'] = ele_a.text.strip()
             question['count'] = int(ele_b.text)
             print question
             questions.append(question)
@@ -62,5 +65,12 @@ if __name__ == '__main__':
     page_url = u'https://www.zhihu.com/topic/19559937/top-answers?page=3'
     html = zhihu.fetch(page_url)
     page = ZhihuPage(page_url, html)
-    for d in page.questions:
-        print d
+    with closing(Session()) as session:
+        for q in page.questions:
+            _q = Question()
+            _q.zhihu_id = q['question_id']
+            _q.url = q['url']
+            _q.fllower_count = q['count']
+            _q.title = q['title']
+            session.add(_q)
+        session.commit()

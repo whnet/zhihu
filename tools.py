@@ -13,6 +13,7 @@ def model_to_dict(model):
         if isinstance(o, (datetime, date)):
             ret[attr] = o.isoformat()
         ret[attr] = o
+    ret.pop('metadata', None)
     return ret
 
 

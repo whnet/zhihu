@@ -35,6 +35,8 @@ def init_database():
             for _table in tables:
                 sql = 'drop table if exists `%s`;' % _table
                 conn.execute(sql)
+            conn.execute(
+                'alter database %s character set utf8;' % MYSQL['db'])
             BaseModel.metadata.create_all(_engine)
             tran.commit()
         except:
