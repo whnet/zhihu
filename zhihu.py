@@ -2,11 +2,28 @@
 # coding: utf-8
 
 import requests
+from urlparse import urljoin
 from datetime import datetime
 
 import const
 import config
 import exceptions
+from parser import HtmlPageParser, extract_question_id
+
+
+class ZhihuPage(HtmlPageParser):
+
+    @property
+    def questions(self):
+        urls = []
+        elements = self.page.xpath(u"//a[@class='toggle-expand']")
+        for element in elements:
+            url = urljoin(
+                self.page_url,
+                element.attrib['href'])
+            question_id = extract_question_id(url)
+            urls.append((url, question_id))
+        return urls
 
 
 class ZhihuSpider(object):
@@ -51,7 +68,7 @@ class ZhihuSpider(object):
         prepared.headers['Date'] = self.date
         prepared.headers['User-Agent'] = const.UA_CHROME
         ret = self.session.send(prepared)
-        return ret
+        return ret.text
 
 
 if __name__ == '__main__':
@@ -59,5 +76,8 @@ if __name__ == '__main__':
         config.ZHIHU_USER_PHONE,
         config.ZHIHU_USER_PASSWORD)
     zhihu.login('')
-    html = zhihu.fetch(
-        u'https://www.zhihu.com/topic/19559937/top-answers?page=3')
+    page_url = u'https://www.zhihu.com/topic/19559937/top-answers?page=3'
+    html = zhihu.fetch(page_url)
+    page = ZhihuPage(page_url, html)
+    for url, _id in page.questions:
+        print _id, url

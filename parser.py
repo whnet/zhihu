@@ -31,11 +31,8 @@ def extract_answer_id(page_uri):
 
 class HtmlPageParser(object):
 
-    def __init__(self, page):
+    def __init__(self,  page_url, page):
         if not isinstance(page, unicode):
             page = page.decode('utf-8')
-        etree.HTML(page.lower())
-        self.page = page
-
-    def page(self):
-        pass
+        self.page = etree.HTML(page.lower())
+        self.page_url = page_url
