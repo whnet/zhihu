@@ -15,15 +15,23 @@ class ZhihuPage(HtmlPageParser):
 
     @property
     def questions(self):
-        urls = []
-        elements = self.page.xpath(u"//a[@class='toggle-expand']")
-        for element in elements:
+        questions = []
+        elements_a = self.page.xpath(u"//a[@class='question_link']")
+        elements_b = self.page.xpath(u"//span[@class='count']")
+        assert len(elements_a) == len(elements_b)
+        for ele_a, ele_b in zip(elements_a, elements_b):
+            question = dict()
             url = urljoin(
                 self.page_url,
-                element.attrib['href'])
+                ele_a.attrib['href'])
             question_id = extract_question_id(url)
-            urls.append((url, question_id))
-        return urls
+            question['question_id'] = int(question_id)
+            question['url'] = url
+            question['title'] = ele_a.text
+            question['count'] = int(ele_b.text)
+            print question
+            questions.append(question)
+        return questions
 
 
 class ZhihuSpider(object):
@@ -79,5 +87,5 @@ if __name__ == '__main__':
     page_url = u'https://www.zhihu.com/topic/19559937/top-answers?page=3'
     html = zhihu.fetch(page_url)
     page = ZhihuPage(page_url, html)
-    for url, _id in page.questions:
-        print _id, url
+    for d in page.questions:
+        print d
