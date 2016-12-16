@@ -22,8 +22,7 @@ _engine = create_engine(
 def init_database():
     with closing(_engine.connect()) as conn:
         tables = [
-            'zhihu_topic', 'zhihu_question',
-            'zhihu_anwser', 'zhihu_comment',
+            t.name for t in BaseModel.metadata.sorted_tables
         ]
         tran = conn.begin()
         try:
