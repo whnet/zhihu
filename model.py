@@ -25,3 +25,22 @@ class Question(BaseModel):
         DateTime, default=datetime.now, nullable=False)
     update_time = Column(
         DateTime, default=datetime.now, nullable=False)
+
+
+class Proxy(BaseModel):
+    __tablename__ = 'proxy'
+    __table_args__ = (
+        Index('proxy_score_index', 'score'),
+        Index('proxy_schema_index', 'schema_type'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    host = Column(String(24), default='', nullable=False)
+    port = Column(Integer, default=80, nullable=False)
+    user = Column(String(32), default='', nullable=False)
+    password = Column(String(32), default='', nullable=False)
+    schema_type = Column(Integer, default=0, nullable=False)
+    score = Column(Integer, default=0, nullable=False)
+    create_time = Column(DateTime, default=datetime.now, nullable=False)
+    update_time = Column(DateTime, default=datetime.now, nullable=False)
+    deleted = Column(Integer, default=0, nullable=False)

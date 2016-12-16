@@ -3,11 +3,12 @@
 
 from contextlib import closing
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from config import MYSQL, DEBUG
 from model import BaseModel
 
-__all__ = ['init_database']
+__all__ = ['init_database', 'Session']
 __author__ = 'gatsby'
 __version__ = '0.0.1'
 
@@ -19,6 +20,8 @@ _engine = create_engine(
     pool_recycle=3600,
     pool_size=12,
     echo_pool=DEBUG)
+
+Session = sessionmaker(bind=_engine)
 
 
 def init_database():
