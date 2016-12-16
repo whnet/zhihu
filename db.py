@@ -29,13 +29,10 @@ def init_database():
             for _table in tables:
                 sql = 'drop table if exists `%s`;' % _table
                 conn.execute(sql)
+            BaseModel.metadata.create_all(_engine)
             tran.commit()
         except:
             tran.rollback()
-            raise
-        try:
-            BaseModel.metadata.create_all(_engine)
-        except:
             raise
 
 if __name__ == '__main__':
