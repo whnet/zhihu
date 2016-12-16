@@ -17,7 +17,20 @@ from parser import HtmlPageParser, extract_question_id
 class ZhihuPage(HtmlPageParser):
 
     @property
+    def html_page_identifier(self):
+        identifier = -1
+        page_url = self.page_url
+        if 'topic' in page_url:
+            identifier = 0
+        elif 'question' in page_url and 'answer' not in page_url:
+            identifier = 1
+        elif 'anwser' in page_url:
+            identifier = 2
+        return identifier
+
+    @property
     def questions(self):
+        assert self.page_identifier == 1
         questions = []
         elements_a = self.page.xpath(u"//a[@class='question_link']")
         elements_b = self.page.xpath(u"//span[@class='count']")
