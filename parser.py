@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import re
-import lxml
+from lxml import etree
 
 
 def extract_topic_id(page_uri):
@@ -32,4 +32,10 @@ def extract_answer_id(page_uri):
 class HtmlPageParser(object):
 
     def __init__(self, page):
+        if not isinstance(page, unicode):
+            page = page.decode('utf-8')
+        etree.HTML(page.lower())
         self.page = page
+
+    def page(self):
+        pass
