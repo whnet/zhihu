@@ -3,6 +3,7 @@
 
 from contextlib import closing
 from datetime import datetime
+from abc import ABCMeta, abstractmethod
 
 import requests
 
@@ -14,6 +15,8 @@ from tools import model_to_dict
 
 class Spider(object):
 
+    __metaclass__ = ABCMeta
+
     session = None
     proxies = []
 
@@ -23,7 +26,7 @@ class Spider(object):
         self.password = password
         super(Spider, self).__init__()
 
-    def init_proxies(self):
+    def load_proxies(self):
         with closing(Session()) as session:
             proxies = []
             for _proxy in session.query(Proxy) \
@@ -45,6 +48,7 @@ class Spider(object):
         ret = self.session.send(prepared)
         return ret.text
 
+    @abstractmethod
     def login(self, *args, **kwargs):
         raise NotImplementedError()
 
