@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import time
 from urlparse import urljoin
 from contextlib import closing
 from multiprocessing import cpu_count
@@ -15,9 +16,10 @@ import const
 import config
 import exceptions
 from db import Session
+from tools import model_to_dict
 from spider import Spider
 from parser import HtmlPageParser, extract_question_id
-from model import Question, Answer, AnswerContent, SpiderValue
+from model import Question, SpiderValue
 
 
 class ZhihuPage(HtmlPageParser):
@@ -54,6 +56,10 @@ class ZhihuPage(HtmlPageParser):
             print question
             questions.append(question)
         return questions
+
+    @property
+    def answers(self):
+        pass
 
 
 class ZhihuSpider(Spider):
@@ -103,7 +109,7 @@ def question_crawler():
                 _q = Question()
                 _q.zhihu_id = q['question_id']
                 _q.url = q['url']
-                _q.like_count = q['count']
+                _q.like_count = q['like_count']
                 _q.title = q['title']
                 session.add(_q)
                 session.commit()
@@ -113,35 +119,44 @@ def question_crawler():
 
 
 def answer_crawler():
-    with closing(Session()) as session:
-        lock_sql = \
-            ("select *from spider_value"
-             "where name = 'spider.value.lock'"
-             "for update;")
-        session.execute(lock_sql)
-        key = 'spider.value.last_question_id'
-        spider_value = session.query(SpiderValue) \
-            .filter(SpiderValue.name == key) \
-            .first()
-        if spider_value is None:
-            spider_value = SpiderValue()
-            spider_value.name = key
-            spider_value.value = '0'
-            session.add(spider_value)
-        session.commit()
-        last_question_id = int(spider_value.value)
-        questions = []
-        for question in session.query(Question) \
-                .filter(Question.id > last_question_id) \
-                .order_by(Question.id) \
-                .limit(100):
-            last_question_id = max(
-                last_question_id,
-                question.id)
-            questions.append(question)
 
-        def fetch_answers(args):
-            pass
+    def fetch_answers(args):
+        pass
+
+    with closing(Session()) as session:
+        zhihu = ZhihuSpider()
+        zhihu.login('')
+        pool = Pool(min(cpu_count(), 5))
+        while True:
+            lock_sql = \
+                ("select *from spider_value "
+                 "where name = 'spider.value.lock' "
+                 "for update;")
+            session.execute(lock_sql)
+            value_key = 'spider.value.last_question_id'
+            spider_value = session.query(SpiderValue) \
+                .filter(SpiderValue.name == value_key) \
+                .first()
+            if spider_value is None:
+                spider_value = SpiderValue()
+                spider_value.name = value_key
+                spider_value.value = '0'
+                session.add(spider_value)
+                session.flush()
+            last_question_id = int(spider_value.value)
+            questions = []
+            for question in session.query(Question) \
+                    .filter(Question.id > last_question_id) \
+                    .order_by(Question.id) \
+                    .limit(100):
+                questions.append(model_to_dict(question))
+            if not questions:
+                time.sleep(5)
+            last_question_id = questions[-1].id
+            spider_value.value = str(last_question_id)
+            session.commit()
+            args = [(zhihu, q) for q in questions]
+            pool.map(fetch_answers, args)
 
 
 if __name__ == '__main__':
