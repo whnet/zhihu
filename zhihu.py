@@ -3,10 +3,11 @@
 
 from urlparse import urljoin
 from contextlib import closing
+from multiprocessing import cpu_count
 
 import gevent
 from gevent import monkey
-monkey.patch_socket()  # noqa
+monkey.patch_all()  # noqa
 from gevent.pool import Pool
 import requests
 
@@ -38,7 +39,7 @@ class ZhihuPage(HtmlPageParser):
         questions = []
         elements_a = self.page.xpath(u"//a[@class='question_link']")
         elements_b = self.page.xpath(u"//span[@class='count']")
-        assert len(elements_a) == len(elements_b)
+        elements_a = elements_a[:len(elements_b)]
         for ele_a, ele_b in zip(elements_a, elements_b):
             question = dict()
             url = urljoin(
@@ -48,7 +49,10 @@ class ZhihuPage(HtmlPageParser):
             question['question_id'] = int(question_id)
             question['url'] = url
             question['title'] = ele_a.text.strip()
-            question['count'] = int(ele_b.text)
+            count = ele_b.text
+            if 'k' in count:
+                count = int(count[:-1]) * 1000
+            question['count'] = count
             print question
             questions.append(question)
         return questions
@@ -69,7 +73,7 @@ class ZhihuSpider(Spider):
         prepared = self.session.prepare_request(req)
         prepared.headers['Date'] = self.date
         prepared.headers['User-Agent'] = const.UA_CHROME
-        ret = self.session.send(prepared)
+        ret = self.session.send(prepared, timeout=10)
         if ret is None or ret.status_code != 200:
             raise exceptions.LoginError()
 
@@ -78,14 +82,15 @@ def question_crawler():
     zhihu = ZhihuSpider(
         config.ZHIHU_USER_PHONE,
         config.ZHIHU_USER_PASSWORD)
-    zhihu.login('')
+    # zhihu.login('')
     url_template = \
         (u'https://www.zhihu.com/topic/'
          u'19559937/top-answers?page=%d')
-    page_urls = [url_template % x for x in range(0, 10)]
-    pool = Pool(4)
+    page_urls = [url_template % x for x in range(1, 10)]
+    pool = Pool(min(cpu_count(), 4))
 
-    def fetch_questions(page_url):
+    def fetch_questions(args):
+        zhihu, page_url = args
         html = zhihu.fetch(page_url)
         page = ZhihuPage(page_url, html)
         with closing(Session()) as session:
@@ -96,8 +101,10 @@ def question_crawler():
                 _q.fllower_count = q['count']
                 _q.title = q['title']
                 session.add(_q)
+                session.commit()
         gevent.sleep(1)
-    pool.map(fetch_questions, page_urls)
+    args = [(zhihu, x) for x in page_urls]
+    pool.map(fetch_questions, args)
 
 
 if __name__ == '__main__':

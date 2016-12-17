@@ -40,8 +40,7 @@ class Spider(object):
         req = requests.Request(
             method, url,
             data=options.get('data'),
-            headers=options.get('headers'),
-            cookies=options.get('cookies'))
+            headers=options.get('headers'))
         prepared = self.session.prepare_request(req)
         prepared.headers['Date'] = self.date
         prepared.headers['User-Agent'] = const.UA_CHROME
