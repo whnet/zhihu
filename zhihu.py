@@ -50,9 +50,7 @@ class ZhihuPage(HtmlPageParser):
             question['url'] = url
             question['title'] = ele_a.text.strip()
             count = ele_b.text
-            if 'k' in count:
-                count = int(count[:-1]) * 1000
-            question['count'] = count
+            question['like_count'] = count
             print question
             questions.append(question)
         return questions
@@ -95,20 +93,21 @@ def question_crawler():
         try:
             html = zhihu.fetch(page_url)
         except:
-            fails += 1
+            fails = fails + 1
             if fails > 5:
                 return
+            gevent.sleep(0.5 * fails)
         page = ZhihuPage(page_url, html)
         with closing(Session()) as session:
             for q in page.questions:
                 _q = Question()
                 _q.zhihu_id = q['question_id']
                 _q.url = q['url']
-                _q.fllower_count = q['count']
+                _q.like_count = q['count']
                 _q.title = q['title']
                 session.add(_q)
                 session.commit()
-        gevent.sleep(1)
+        gevent.sleep(0.5)
     args = [(zhihu, x) for x in page_urls]
     pool.map(fetch_questions, args)
 

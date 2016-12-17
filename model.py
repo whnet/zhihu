@@ -4,7 +4,8 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    Column, BigInteger, Integer, String, DateTime)
+    Column, BigInteger, Integer, String,
+    DateTime, Text)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import Index
 
@@ -22,7 +23,7 @@ class Question(BaseModel):
     url = Column(String(255), default='', nullable=False)
     title = Column(String(128), default='', nullable=False)
     summary = Column(String(512), default='', nullable=False)
-    fllower_count = Column(Integer, default=0, nullable=False)
+    like_count = Column(String(12), default='', nullable=False)
     create_time = Column(
         DateTime, default=datetime.now, nullable=False)
     update_time = Column(
@@ -47,3 +48,42 @@ class Proxy(BaseModel):
     create_time = Column(DateTime, default=datetime.now, nullable=False)
     update_time = Column(DateTime, default=datetime.now, nullable=False)
     deleted = Column(Integer, default=0, nullable=False)
+
+
+class SpiderValue(BaseModel):
+    __tablename__ = 'spider_value'
+    __table_args__ = (
+        Index('spider_value_index', 'name'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(128), nullable=False)
+    value = Column(String(255), nullable=False)
+
+
+class Anwser(BaseModel):
+    __tablename__ = 'zhihu_answer'
+    __table_args__ = (
+        Index('zhihu_answer_index', 'zhihu_id'),
+        Index('zhihu_question_index', 'question_id'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    zhihu_id = Column(Integer, nullable=False)
+    question_id = Column(Integer, nullable=False)
+    like_count = Column(String(16), nullable=False)
+    nick_name = Column(
+        String(64), default='', nullable=False)
+    create_time = Column(
+        DateTime, default=datetime.now, nullable=False)
+    update_time = Column(
+        DateTime, default=datetime.now, nullable=False)
+    deleted = Column(Integer, default=0, nullable=False)
+
+
+class AnwserContent(BaseModel):
+    __tablename__ = 'answer_content'
+
+    id = Column(Integer, primary_key=True)
+    answer_id = Column(Integer, nullable=False)
+    content = Column(Text, default='', nullable=False)
