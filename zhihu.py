@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import requests
 from urlparse import urljoin
 from contextlib import closing
+
+import gevent
+from gevent import monkey
+monkey.patch_socket()  # noqa
+from gevent.pool import Pool
+import requests
 
 import const
 import config
@@ -69,20 +74,31 @@ class ZhihuSpider(Spider):
             raise exceptions.LoginError()
 
 
-if __name__ == '__main__':
+def question_crawler():
     zhihu = ZhihuSpider(
         config.ZHIHU_USER_PHONE,
         config.ZHIHU_USER_PASSWORD)
     zhihu.login('')
-    page_url = u'https://www.zhihu.com/topic/19559937/top-answers?page=3'
-    html = zhihu.fetch(page_url)
-    page = ZhihuPage(page_url, html)
-    with closing(Session()) as session:
-        for q in page.questions:
-            _q = Question()
-            _q.zhihu_id = q['question_id']
-            _q.url = q['url']
-            _q.fllower_count = q['count']
-            _q.title = q['title']
-            session.add(_q)
-        session.commit()
+    url_template = \
+        (u'https://www.zhihu.com/topic/'
+         u'19559937/top-answers?page=%d')
+    page_urls = [url_template % x for x in range(0, 10)]
+    pool = Pool(4)
+
+    def fetch_questions(page_url):
+        html = zhihu.fetch(page_url)
+        page = ZhihuPage(page_url, html)
+        with closing(Session()) as session:
+            for q in page.questions:
+                _q = Question()
+                _q.zhihu_id = q['question_id']
+                _q.url = q['url']
+                _q.fllower_count = q['count']
+                _q.title = q['title']
+                session.add(_q)
+        gevent.sleep(1)
+    pool.map(fetch_questions, page_urls)
+
+
+if __name__ == '__main__':
+    question_crawler()
