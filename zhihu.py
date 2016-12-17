@@ -15,9 +15,9 @@ import const
 import config
 import exceptions
 from db import Session
-from model import Question
 from spider import Spider
 from parser import HtmlPageParser, extract_question_id
+from model import Question, Answer, AnswerContent, SpiderValue
 
 
 class ZhihuPage(HtmlPageParser):
@@ -110,6 +110,38 @@ def question_crawler():
         gevent.sleep(0.5)
     args = [(zhihu, x) for x in page_urls]
     pool.map(fetch_questions, args)
+
+
+def answer_crawler():
+    with closing(Session()) as session:
+        lock_sql = \
+            ("select *from spider_value"
+             "where name = 'spider.value.lock'"
+             "for update;")
+        session.execute(lock_sql)
+        key = 'spider.value.last_question_id'
+        spider_value = session.query(SpiderValue) \
+            .filter(SpiderValue.name == key) \
+            .first()
+        if spider_value is None:
+            spider_value = SpiderValue()
+            spider_value.name = key
+            spider_value.value = '0'
+            session.add(spider_value)
+        session.commit()
+        last_question_id = int(spider_value.value)
+        questions = []
+        for question in session.query(Question) \
+                .filter(Question.id > last_question_id) \
+                .order_by(Question.id) \
+                .limit(100):
+            last_question_id = max(
+                last_question_id,
+                question.id)
+            questions.append(question)
+
+        def fetch_answers(args):
+            pass
 
 
 if __name__ == '__main__':

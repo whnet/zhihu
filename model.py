@@ -61,7 +61,7 @@ class SpiderValue(BaseModel):
     value = Column(String(255), nullable=False)
 
 
-class Anwser(BaseModel):
+class Answer(BaseModel):
     __tablename__ = 'zhihu_answer'
     __table_args__ = (
         Index('zhihu_answer_index', 'zhihu_id'),
@@ -81,7 +81,7 @@ class Anwser(BaseModel):
     deleted = Column(Integer, default=0, nullable=False)
 
 
-class AnwserContent(BaseModel):
+class AnswerContent(BaseModel):
     __tablename__ = 'answer_content'
 
     id = Column(Integer, primary_key=True)
