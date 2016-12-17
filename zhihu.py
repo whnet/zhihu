@@ -82,16 +82,22 @@ def question_crawler():
     zhihu = ZhihuSpider(
         config.ZHIHU_USER_PHONE,
         config.ZHIHU_USER_PASSWORD)
-    # zhihu.login('')
+    zhihu.login('')
     url_template = \
         (u'https://www.zhihu.com/topic/'
          u'19559937/top-answers?page=%d')
     page_urls = [url_template % x for x in range(1, 10)]
-    pool = Pool(min(cpu_count(), 4))
+    pool = Pool(min(cpu_count(), 5))
 
     def fetch_questions(args):
         zhihu, page_url = args
-        html = zhihu.fetch(page_url)
+        fails = 0
+        try:
+            html = zhihu.fetch(page_url)
+        except:
+            fails += 1
+            if fails > 5:
+                return
         page = ZhihuPage(page_url, html)
         with closing(Session()) as session:
             for q in page.questions:
