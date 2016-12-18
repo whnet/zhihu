@@ -19,7 +19,7 @@ from db import Session
 from tools import model_to_dict
 from spider import Spider
 from parser import HtmlPageParser, extract_question_id
-from model import Question, SpiderValue
+from model import Question, SpiderValue, Answer, AnswerContent
 
 
 class ZhihuPage(HtmlPageParser):
@@ -121,12 +121,35 @@ def question_crawler():
 def answer_crawler():
 
     def fetch_answers(args):
-        pass
+        zhihu, question = args
+        page_url = question['url']
+        fails = 0
+        try:
+            html = zhihu.fetch(page_url)
+        except:
+            fails = fails + 1
+            if fails > 5:
+                return
+            gevent.sleep(0.5 * fails)
+        answers = html.answers(10)
+        for answer in answers:
+            _a = Answer()
+            _a.zhihu_id = answer['id']
+            _a.nick_name = answer['nick_name']
+            _a.like_count = answer['like_count']
+            _a.question_id = question['question_id']
+            session.add(_a)
+            session.commit()
+            _c = AnswerContent()
+            _c.answer_id = _a.id
+            _c.content = answer.content
+            session.add(_c)
+            session.commit()
 
+    zhihu = ZhihuSpider()
+    zhihu.login('')
     with closing(Session()) as session:
-        zhihu = ZhihuSpider()
-        zhihu.login('')
-        pool = Pool(min(cpu_count(), 5))
+        pool = Pool(5)
         while True:
             lock_sql = \
                 ("select *from spider_value "
@@ -135,7 +158,8 @@ def answer_crawler():
             session.execute(lock_sql)
             value_key = 'spider.value.last_question_id'
             spider_value = session.query(SpiderValue) \
-                .filter(SpiderValue.name == value_key) \
+                .filter(
+                    SpiderValue.name == value_key) \
                 .first()
             if spider_value is None:
                 spider_value = SpiderValue()
@@ -152,7 +176,7 @@ def answer_crawler():
                 questions.append(model_to_dict(question))
             if not questions:
                 time.sleep(5)
-            last_question_id = questions[-1].id
+            last_question_id = questions[-1]['id']
             spider_value.value = str(last_question_id)
             session.commit()
             args = [(zhihu, q) for q in questions]

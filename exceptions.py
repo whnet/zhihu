@@ -29,13 +29,6 @@ class LoginError(SpiderException):
     detail = u'登录失败'
 
 
-class NoDownTaskError(SpiderException):
-
-    code = 1002
-    error = 'no download task find.'
-    detail = u'未找到下载文件'
-
-
 if __name__ == '__main__':
     try:
         raise SpiderException()

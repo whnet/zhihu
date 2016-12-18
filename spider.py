@@ -34,6 +34,9 @@ class Spider(object):
                     .order_by(Proxy.score.desc()) \
                     .all():
                 proxies.append(model_to_dict(_proxy))
+            proxies.sort(
+                lambda o: o['score'],
+                reverse=True)
             self.proxies = proxies
 
     def fetch(self, url, method='GET', **options):
