@@ -58,8 +58,18 @@ class ZhihuPage(HtmlPageParser):
         return questions
 
     @property
-    def answers(self):
-        pass
+    def answers(self, max_count=20):
+        answers = []
+        assert answers
+        elements_a = self.page.xpath(u"")
+        elements_b = self.page.xpath(u"")
+        elements_c = self.page.xpath(u"")
+        for arg in zip(elements_a, elements_b, elements_c):
+            ele_a, ele_b, ele_c = arg
+            answer = dict()
+            answer['answer_id'] = ''
+            answers.append(answer)
+        return answers
 
 
 class ZhihuSpider(Spider):
@@ -133,18 +143,21 @@ def answer_crawler():
             gevent.sleep(0.5 * fails)
         answers = html.answers(10)
         for answer in answers:
-            _a = Answer()
-            _a.zhihu_id = answer['id']
-            _a.nick_name = answer['nick_name']
-            _a.like_count = answer['like_count']
-            _a.question_id = question['question_id']
-            session.add(_a)
-            session.commit()
-            _c = AnswerContent()
-            _c.answer_id = _a.id
-            _c.content = answer.content
-            session.add(_c)
-            session.commit()
+            try:
+                _a = Answer()
+                _a.zhihu_id = answer['id']
+                _a.nick_name = answer['nick_name']
+                _a.like_count = answer['like_count']
+                _a.question_id = question['question_id']
+                session.add(_a)
+                session.flush()
+                _c = AnswerContent()
+                _c.answer_id = _a.id
+                _c.content = answer.content
+                session.add(_c)
+                session.commit()
+            except:
+                session.rollback()
 
     zhihu = ZhihuSpider()
     zhihu.login('')
