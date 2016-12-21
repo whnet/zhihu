@@ -210,11 +210,9 @@ def start_multi_instance():
 
 
 def crawler(idx):
-    """爬取问题答案"""
     def query_questions(session, min_id, max_id):
         questions = []
-        for _question in session \
-                .filter(
+        for _question in session.filter(
                     Question.id > min_id,
                     Question.id <= max_id).all():
             questions.append(_question)
@@ -254,15 +252,12 @@ def crawler(idx):
                 tries = tries + 1
                 gevent.sleep(tries * 0.5)
                 continue
-
             tries = 0
             last_question_id = next_question_id
             spider_config.value = str(next_question_id)
             session.commit()
-
             questions = query_questions(
                 session, last_question_id, next_question_id)
-            print "运行打印"
             pool.map(fetch_html_pages, questions)
             pool.start()
 
