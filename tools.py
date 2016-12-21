@@ -3,7 +3,7 @@
 
 import os
 import fcntl
-from fuctools import wraps
+from functools import wraps
 from datetime import datetime, date
 
 
@@ -47,6 +47,20 @@ def model_to_dict(model):
         ret[attr] = o
     ret.pop('metadata', None)
     return ret
+
+
+def ignore(exceptions):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            try:
+                res = f(*args, **kwargs)
+            except Exception as e:
+                if not isinstance(e, exceptions):
+                    raise
+            return res
+        return wrapper
+    return decorator
 
 
 if __name__ == '__main__':

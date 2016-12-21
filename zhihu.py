@@ -4,13 +4,14 @@
 import time
 from urlparse import urljoin
 from contextlib import closing
-from multiprocessing import cpu_count
+from multiprocessing import cpu_count, Process
 
 import gevent
 from gevent import monkey
 monkey.patch_all()  # noqa
-from gevent.pool import Pool
+from gevent.pool import Pool as GreenLetPool
 import requests
+from sqlalchemy import func
 
 import const
 import config
@@ -196,5 +197,77 @@ def answer_crawler():
             pool.map(fetch_answers, args)
 
 
+def fetch_html_pages(question):
+    question_uri = question.url
+    print question_uri
+
+
+def start_multi_instance():
+    worker_num = min(cpu_count(), config.MIN_WOKER_NUM)
+    for i in range(worker_num):
+        p = Process(target=crawler, args=(i, ))
+        p.start()
+
+
+def crawler(idx):
+    """爬取问题答案"""
+    def query_questions(session, min_id, max_id):
+        questions = []
+        for _question in session \
+                .filter(
+                    Question.id > min_id,
+                    Question.id <= max_id).all():
+            questions.append(_question)
+        return questions
+    read_lock_sql = \
+        ("select *from spider_value where name"
+         " = 'spider.value.lock' for update;")
+    read_per_cycle = config.READ_STEP_PER_CYCLE
+    with closing(Session()) as session:
+        tries = 0
+        pool = GreenLetPool(5)
+        while True:
+            gevent.sleep(0.5)
+            session.execute(read_lock_sql)
+            spider_config_key = 'spider.value.last_question_id'
+            spider_config = session.query(SpiderValue) \
+                .filter(SpiderValue.name == spider_config_key).first()
+            if spider_config is None:
+                spider_config = SpiderValue()
+                spider_config.name = spider_config_key
+                spider_config.value = '0'
+                session.add(spider_config)
+            last_question_id = int(spider_config.value)
+            next_question_id = session \
+                .query(Question.id) \
+                .filter(Question.id > last_question_id) \
+                .order_by(Question.id) \
+                .offset(read_per_cycle-1) \
+                .limit(1).scalar()
+            if next_question_id is None:
+                next_question_id = session \
+                    .query(func.max(Question.id)) \
+                    .order_by(Question.id) \
+                    .scalar()
+            if next_question_id == last_question_id:
+                session.commit()
+                tries = tries + 1
+                gevent.sleep(tries * 0.5)
+                continue
+
+            tries = 0
+            last_question_id = next_question_id
+            spider_config.value = str(next_question_id)
+            session.commit()
+
+            questions = query_questions(
+                session, last_question_id, next_question_id)
+            print "运行打印"
+            pool.map(fetch_html_pages, questions)
+            pool.start()
+
+
 if __name__ == '__main__':
-    question_crawler()
+    # question_crawler()
+    # crawler(0)
+    start_multi_instance()
