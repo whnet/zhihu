@@ -32,16 +32,15 @@ def init_database():
         ]
         tran = conn.begin()
         try:
+            conn.execute(
+                "alter database %s character set utf8;" % MYSQL['db'])
             for _table in tables:
                 sql = "drop table if exists `%s`;" % _table
                 conn.execute(sql)
-            conn.execute(
-                "alter database %s character set utf8;" % MYSQL['db'])
             BaseModel.metadata.create_all(_engine)
-            conn.execute(
-                ("insert into spider_value(name, value) "
-                 "('spider.value.lock', '1');")
-            )
+            with open('./init.sql', 'rt') as f:
+                sql = f.read()
+                conn.execute(sql)
             tran.commit()
         except:
             tran.rollback()
