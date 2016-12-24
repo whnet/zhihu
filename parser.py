@@ -36,9 +36,3 @@ class HtmlPageParser(object):
             page = page.decode('utf-8')
         self.page = etree.HTML(page.lower())
         self.page_url = page_url
-        self.page_identifier = \
-            self.html_page_identifier()
-
-    @property
-    def html_page_identifier(self):
-        raise NotImplementedError()

@@ -1,44 +1,31 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import time
+import os
+import contextlib
 from urlparse import urljoin
-from contextlib import closing
-from multiprocessing import cpu_count, Process
+from multiprocessing import Process, cpu_count
 
 import gevent
+import requests
+from gevent.pool import Pool
+from sqlalchemy import func
 from gevent import monkey
 monkey.patch_all()  # noqa
-from gevent.pool import Pool as GreenLetPool
-import requests
-from sqlalchemy import func
 
 import const
 import config
 import exceptions
 from db import Session
-from tools import model_to_dict
 from spider import Spider
 from parser import HtmlPageParser, extract_question_id
-from model import Question, SpiderValue, Answer, AnswerContent
+from model import SpiderValue, Question
 
 
 class ZhihuPage(HtmlPageParser):
 
-    def html_page_identifier(self):
-        identifier = -1
-        page_url = self.page_url
-        if 'topic' in page_url:
-            identifier = 0
-        elif 'question' in page_url and 'answer' not in page_url:
-            identifier = 1
-        elif 'anwser' in page_url:
-            identifier = 2
-        return identifier
-
     @property
     def questions(self):
-        assert self.page_identifier == 0
         questions = []
         elements_a = self.page.xpath(u"//a[@class='question_link']")
         elements_b = self.page.xpath(u"//span[@class='count']")
@@ -59,18 +46,14 @@ class ZhihuPage(HtmlPageParser):
         return questions
 
     @property
-    def answers(self, max_count=20):
-        answers = []
-        assert answers
-        elements_a = self.page.xpath(u"")
-        elements_b = self.page.xpath(u"")
-        elements_c = self.page.xpath(u"")
-        for arg in zip(elements_a, elements_b, elements_c):
-            ele_a, ele_b, ele_c = arg
-            answer = dict()
-            answer['answer_id'] = ''
-            answers.append(answer)
-        return answers
+    def answers(self):
+        elements_a = self.page.xpath(
+            u"//div[@class='zm-editable-content clearfix']")
+        elements_b = self.page.xpath(
+            u"//div[@class='zm-item-answer-author-info']")
+        elements_c = self.page.xpath(
+            u"//span[@class='js-voteCount']")
+        print elements_a, elements_b, elements_c
 
 
 class ZhihuSpider(Spider):
@@ -115,7 +98,7 @@ def question_crawler():
                 return
             gevent.sleep(0.5 * fails)
         page = ZhihuPage(page_url, html)
-        with closing(Session()) as session:
+        with contextlib.closing(Session()) as session:
             for q in page.questions:
                 _q = Question()
                 _q.zhihu_id = q['question_id']
@@ -129,101 +112,46 @@ def question_crawler():
     pool.map(fetch_questions, args)
 
 
-def answer_crawler():
-
-    def fetch_answers(args):
-        zhihu, question = args
-        page_url = question['url']
-        fails = 0
-        try:
-            html = zhihu.fetch(page_url)
-        except:
-            fails = fails + 1
-            if fails > 5:
-                return
-            gevent.sleep(0.5 * fails)
-        answers = html.answers(10)
-        for answer in answers:
-            try:
-                _a = Answer()
-                _a.zhihu_id = answer['id']
-                _a.nick_name = answer['nick_name']
-                _a.like_count = answer['like_count']
-                _a.question_id = question['question_id']
-                session.add(_a)
-                session.flush()
-                _c = AnswerContent()
-                _c.answer_id = _a.id
-                _c.content = answer.content
-                session.add(_c)
-                session.commit()
-            except:
-                session.rollback()
-
-    zhihu = ZhihuSpider()
-    zhihu.login('')
-    with closing(Session()) as session:
-        pool = Pool(5)
-        while True:
-            lock_sql = \
-                ("select *from spider_value "
-                 "where name = 'spider.value.lock' "
-                 "for update;")
-            session.execute(lock_sql)
-            value_key = 'spider.value.last_question_id'
-            spider_value = session.query(SpiderValue) \
-                .filter(
-                    SpiderValue.name == value_key) \
-                .first()
-            if spider_value is None:
-                spider_value = SpiderValue()
-                spider_value.name = value_key
-                spider_value.value = '0'
-                session.add(spider_value)
-                session.flush()
-            last_question_id = int(spider_value.value)
-            questions = []
-            for question in session.query(Question) \
-                    .filter(Question.id > last_question_id) \
-                    .order_by(Question.id) \
-                    .limit(100):
-                questions.append(model_to_dict(question))
-            if not questions:
-                time.sleep(5)
-            last_question_id = questions[-1]['id']
-            spider_value.value = str(last_question_id)
-            session.commit()
-            args = [(zhihu, q) for q in questions]
-            pool.map(fetch_answers, args)
-
-
-def fetch_html_pages(question):
-    question_uri = question.url
-    print question_uri
+_zhihu = ZhihuSpider(
+    config.ZHIHU_USER_PHONE,
+    config.ZHIHU_USER_PASSWORD)
+_zhihu.login('')
 
 
 def start_multi_instance():
     worker_num = min(cpu_count(), config.MIN_WOKER_NUM)
     for i in range(worker_num):
-        p = Process(target=crawler, args=(i, ))
+        p = Process(target=crawler, args=(i,))
         p.start()
 
 
-def crawler(idx):
-    def query_questions(session, min_id, max_id):
+def query_questions(min_id, max_id):
+    with contextlib.closing(Session()) as session:
         questions = []
-        for _question in session.filter(
+        for _question in session.query(Question) \
+                .filter(
                     Question.id > min_id,
                     Question.id <= max_id).all():
             questions.append(_question)
         return questions
+
+
+def fetch_then_parse(question):
+    question_url = question.url
+    html = _zhihu.fetch(question_url)
+    page = ZhihuPage(question_url, html)
+    print page.answers
+
+
+def crawler(idx):
+    print "pid: %d, ppid: %d" % (os.getpid(), os.getppid())
     read_lock_sql = \
         ("select *from spider_value where name"
          " = 'spider.value.lock' for update;")
     read_per_cycle = config.READ_STEP_PER_CYCLE
-    with closing(Session()) as session:
+    with contextlib.closing(Session()) as session:
         tries = 0
-        pool = GreenLetPool(5)
+        pool = Pool(5)
         while True:
             gevent.sleep(0.5)
             session.execute(read_lock_sql)
@@ -240,8 +168,7 @@ def crawler(idx):
                 .query(Question.id) \
                 .filter(Question.id > last_question_id) \
                 .order_by(Question.id) \
-                .offset(read_per_cycle-1) \
-                .limit(1).scalar()
+                .offset(read_per_cycle-1).limit(1).scalar()
             if next_question_id is None:
                 next_question_id = session \
                     .query(func.max(Question.id)) \
@@ -249,20 +176,21 @@ def crawler(idx):
                     .scalar()
             if next_question_id == last_question_id:
                 session.commit()
-                tries = tries + 1
+                tries = max(tries + 1, 20)
                 gevent.sleep(tries * 0.5)
                 continue
             tries = 0
-            last_question_id = next_question_id
             spider_config.value = str(next_question_id)
             session.commit()
+            greenlets = []
             questions = query_questions(
-                session, last_question_id, next_question_id)
-            pool.map(fetch_html_pages, questions)
-            pool.start()
+               last_question_id, next_question_id)
+            for _question in questions:
+                greenlets.append(
+                    pool.spawn(fetch_then_parse, _question))
+            pool.join()
+            last_question_id = next_question_id
 
 
 if __name__ == '__main__':
-    # question_crawler()
-    # crawler(0)
     start_multi_instance()
