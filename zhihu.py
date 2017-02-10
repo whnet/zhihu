@@ -156,24 +156,20 @@ def crawler(idx):
             gevent.sleep(0.5)
             session.execute(read_lock_sql)
             spider_config_key = 'spider.value.last_question_id'
-            spider_config = session.query(SpiderValue) \
-                .filter(SpiderValue.name == spider_config_key).first()
+            spider_config = session.query(SpiderValue).filter(
+                SpiderValue.name == spider_config_key).first()
             if spider_config is None:
                 spider_config = SpiderValue()
                 spider_config.name = spider_config_key
                 spider_config.value = '0'
                 session.add(spider_config)
             last_question_id = int(spider_config.value)
-            next_question_id = session \
-                .query(Question.id) \
-                .filter(Question.id > last_question_id) \
-                .order_by(Question.id) \
+            next_question_id = session.query(Question.id) \
+                .filter(Question.id > last_question_id).order_by(Question.id) \
                 .offset(read_per_cycle-1).limit(1).scalar()
             if next_question_id is None:
-                next_question_id = session \
-                    .query(func.max(Question.id)) \
-                    .order_by(Question.id) \
-                    .scalar()
+                next_question_id = session.query(func.max(Question.id)) \
+                    .order_by(Question.id).scalar()
             if next_question_id == last_question_id:
                 session.commit()
                 tries = max(tries + 1, 20)
@@ -194,3 +190,4 @@ def crawler(idx):
 
 if __name__ == '__main__':
     start_multi_instance()
+    

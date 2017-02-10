@@ -1,46 +1,42 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from contextlib import closing
+import contextlib
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from config import MYSQL, DEBUG
 from model import BaseModel
+from config import MYSQL, DEBUG
 
-__all__ = ['init_database', 'Session']
-__author__ = 'gatsby'
-__version__ = '0.0.1'
+__all__ = ['init_database']
 
 _db_conn_string = (
     'mysql+pymysql://{user}:{pass}@{host}:{port}/{db}?charset=utf8')
 
 _engine = create_engine(
     _db_conn_string.format(**MYSQL),
+    pool_size=MYSQL['pool_size'],
     pool_recycle=3600,
-    pool_size=12,
     echo_pool=DEBUG)
 
 Session = sessionmaker(bind=_engine)
 
 
 def init_database():
-    with closing(_engine.connect()) as conn:
-        tables = [
-            table.name for table in
-            BaseModel.metadata.sorted_tables
-        ]
-        tran = conn.begin()
+    with contextlib.closing(_engine.connect()) as connect:
+        tables = [table.name for table in BaseModel.metadata.sorted_tables]
+        tran = connect.begin()
         try:
-            conn.execute(
+            connect.execute(
                 "alter database %s character set utf8;" % MYSQL['db'])
             for _table in tables:
                 sql = "drop table if exists `%s`;" % _table
-                conn.execute(sql)
+                connect.execute(sql)
             BaseModel.metadata.create_all(_engine)
             with open('./init.sql', 'rt') as f:
                 sql = f.read()
-                conn.execute(sql)
+                connect.execute(sql)
             tran.commit()
         except:
             tran.rollback()
