@@ -34,10 +34,10 @@ def init_database():
                 sql = "drop table if exists `%s`;" % _table
                 connect.execute(sql)
             BaseModel.metadata.create_all(_engine)
-            with open('./init.sql', 'rt') as f:
+            with open('./dbs/init.sql', 'rt') as f:
                 for sql in f:
                     connect.execute(sql)
-                    tran.commit()
+                tran.commit()
         except:
             tran.rollback()
 
