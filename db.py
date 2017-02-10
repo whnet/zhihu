@@ -35,9 +35,9 @@ def init_database():
                 connect.execute(sql)
             BaseModel.metadata.create_all(_engine)
             with open('./init.sql', 'rt') as f:
-                sql = f.read()
-                connect.execute(sql)
-            tran.commit()
+                for sql in f:
+                    connect.execute(sql)
+                    tran.commit()
         except:
             tran.rollback()
 
