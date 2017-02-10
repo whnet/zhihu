@@ -8,16 +8,27 @@ import requests
 from gevent import monkey
 monkey.patch_all()  # noqa
 
-UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) '
-      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.98 '
-      'Safari/537.36')
+UA = (
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) '
+    'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54'
+    '.0.2840.98 Safari/537.36'
+)
 
 
 class HttpClient(object):
 
-    def __init__(self, tries=5):
+    def __init__(self, tries=3):
         self.session = requests.Session()
+        self.useragent = UA
         self.tries = tries
+
+    @property
+    def ua(self):
+        return self.useragent
+
+    @ua.setter
+    def ua(self, useragent):
+        self.useragent = useragent
 
     def fetch(self, url, method='GET', data=None, **options):
         req = requests.Request(
@@ -39,5 +50,8 @@ class HttpClient(object):
             if resp:
                 break
         else:
-            raise StandardError(u'网络请求失败.')
+            raise requests.exceptions.HTTPError
         return resp
+
+if __name__ == '__main__':
+    pass
