@@ -40,7 +40,6 @@ def init_database():
             tran.commit()
         except:
             tran.rollback()
-            raise
 
 if __name__ == '__main__':
     init_database()
