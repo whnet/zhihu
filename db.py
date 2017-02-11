@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from model import BaseModel
 from config import MYSQL, DEBUG
 
-__all__ = ['init_database']
+__all__ = ['init_database', 'Session']
 
 _db_conn_string = (
     'mysql+pymysql://{user}:{pass}@{host}:{port}/{db}?charset=utf8')
@@ -25,14 +25,10 @@ Session = sessionmaker(bind=_engine)
 
 def init_database():
     with contextlib.closing(_engine.connect()) as connect:
-        tables = [table.name for table in BaseModel.metadata.sorted_tables]
         tran = connect.begin()
         try:
             connect.execute(
                 "alter database %s character set utf8;" % MYSQL['db'])
-            for _table in tables:
-                sql = "drop table if exists `%s`;" % _table
-                connect.execute(sql)
             BaseModel.metadata.create_all(_engine)
             with open('./dbs/init.sql', 'rt') as f:
                 for sql in f:
