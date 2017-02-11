@@ -4,7 +4,6 @@
 import os
 import fcntl
 from functools import wraps
-from datetime import datetime, date
 
 
 def singleton(pid_filename):
@@ -33,33 +32,6 @@ def singleton(pid_filename):
             os.remove(pid_filename)
             return ret
         return decorated
-    return decorator
-
-
-def model_to_dict(model):
-    ret = dict()
-    for attr in dir(model):
-        if attr.starts_with('-'):
-            continue
-        o = getattr(model, attr)
-        if isinstance(o, (datetime, date)):
-            ret[attr] = o.isoformat()
-        ret[attr] = o
-    ret.pop('metadata', None)
-    return ret
-
-
-def ignore(exceptions):
-    def decorator(f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            try:
-                res = f(*args, **kwargs)
-            except Exception as e:
-                if not isinstance(e, exceptions):
-                    raise
-            return res
-        return wrapper
     return decorator
 
 
