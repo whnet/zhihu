@@ -11,12 +11,12 @@ class Crawler(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, user=None, password=None):
-        self.user = user
         self.proxies = None
+        self.user = user
         self.password = password
         super(Crawler, self).__init__()
 
-    def load_proxies(self):
+    def proxies(self):
         self.proxies = query_proxies()
         self.proxies.sort(lambda o: o['score'])
 
