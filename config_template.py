@@ -4,6 +4,7 @@
 DEBUG = True
 
 MYSQL = {
+    'pool_size': 30,
     'user': 'root',
     'pass': 'localdev',
     'host': '127.0.0.1',
