@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import glob
 import contextlib
 
 from sqlalchemy import create_engine
@@ -30,10 +31,11 @@ def init_database():
             connect.execute(
                 "alter database %s character set utf8;" % MYSQL['db'])
             BaseModel.metadata.create_all(_engine)
-            with open('./dbs/init.sql', 'rt') as f:
-                for sql in f:
-                    connect.execute(sql)
-                tran.commit()
+            for sql_script_file in glob.glob('./sqls/*.sql'):
+                with open(sql_script_file, 'rt') as f:
+                    for sql in f:
+                        connect.execute(sql)
+                    tran.commit()
         except:
             tran.rollback()
 
