@@ -4,33 +4,35 @@
 import json
 
 
-class SpiderException(Exception):
+class BaseError(StandardError):
 
-    code = 1000
-    error = 'spider error.'
-    detail = u'爬虫异常'
+    error_code = 0
+    error_desc = 'base error.'
+    detail = 'an base error occured.'
 
-    def __init__(self, message=None):
-        if message is not None:
-            self.detail = message
+    def __init__(
+            self,
+            error_code=None,
+            error_desc=None,
+            detail=None):
+        super(BaseError, self).__init__()
+        if error_code is not None:
+            self.error_code = error_code
+        if error_desc is not None:
+            self.error_desc = error_desc
+        if detail is not None:
+            self.detail = detail
 
     def __str__(self):
-        error = dict(
-            code=self.code,
-            error=self.error,
-            detail=self.detail)
-        return json.dumps(error)
-
-
-class LoginError(SpiderException):
-
-    code = 1001
-    error = 'login error.'
-    detail = u'登录失败'
-
+        info = dict(
+            error_code=self.error_code,
+            error_desc=self.error_desc,
+            detail=self.detail,
+        )
+        return json.dumps(info)
 
 if __name__ == '__main__':
     try:
-        raise SpiderException()
-    except Exception as e:
+        raise BaseError
+    except BaseError as e:
         print e

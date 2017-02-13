@@ -17,8 +17,8 @@ class Crawler(object):
         super(Crawler, self).__init__()
 
     def load_proxies(self):
-        proxies = query_proxies()
-        self.proxies = proxies.sort(lambda o: o['score'], reverse=True)
+        self.proxies = query_proxies()
+        self.proxies.sort(lambda o: o['score'])
 
     @abstractmethod
     def login(self):
