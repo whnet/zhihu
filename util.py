@@ -35,5 +35,15 @@ def singleton(pid_filename):
     return decorator
 
 
+def cache(expire_seconds=300):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            res = f(*args, **kwargs)
+            return res
+        return wrapper
+    return decorator
+
+
 if __name__ == '__main__':
     pass
